@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>Financy | Ombor Tizimi</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.4); }
+        .bg-main { background: radial-gradient(circle at top left, #e0f7fa 0%, #ffffff 50%, #80deea 100%); }
+        .nav-active { background: #0ea5e9; color: white; box-shadow: 0 10px 15px -3px rgba(14, 165, 233, 0.4); }
+        .product-card:hover { transform: translateY(-2px); transition: all 0.2s; }
+        .batch-list { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .batch-active .batch-list { max-height: 1000px; }
+        .rotate-icon { transition: transform 0.3s; }
+        .batch-active .rotate-icon { transform: rotate(180deg); }
+        
+        @keyframes modalZoom {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-anim { animation: modalZoom 0.2s ease-out; }
+    </style>
+</head>
+<body class="bg-main min-h-screen pb-24 lg:pb-0">
+
+    <div class="flex h-screen overflow-hidden">
+        <aside class="hidden lg:flex flex-col w-80 m-6 glass rounded-[3rem] p-8 shadow-2xl relative z-10">
+            <div class="mb-12"><h2 class="text-3xl font-black text-sky-900 tracking-tighter italic">FINANCY</h2></div>
+            <nav class="space-y-4 flex-1">
+                <a href="/dashboard?email={{ user.email }}" class="flex items-center p-4 text-sky-900 hover:bg-white/80 rounded-3xl transition-all"><i class="fas fa-th-large mr-4 text-xl"></i> <span class="font-bold text-sm">Dashboard</span></a>
+                <a href="/inventory?email={{ user.email }}" class="flex items-center p-4 rounded-3xl nav-active transition-all"><i class="fas fa-box-archive mr-4 text-xl"></i> <span class="font-extrabold text-sm">Ombor Tizimi</span></a>
+                <a href="/debts?email={{ user.email }}" class="flex items-center p-4 text-sky-900 hover:bg-white/80 rounded-3xl transition-all"><i class="fas fa-hand-holding-dollar mr-4 text-xl"></i> <span class="font-bold text-sm">Qarz Daftar</span></a>
+                <a href="/ai-chat?email={{ user.email }}" class="flex items-center p-4 text-sky-900 hover:bg-white/80 rounded-3xl transition-all"><i class="fas fa-robot mr-4 text-xl"></i> <span class="font-bold text-sm">AI Tahlilchi</span></a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto p-4 lg:p-10">
+            <header class="flex flex-col md:flex-row gap-4 justify-between items-center mb-8">
+                <div class="flex items-center gap-4 w-full md:w-auto">
+                    <a href="/dashboard?email={{ user.email }}" class="w-12 h-12 glass rounded-2xl flex items-center justify-center text-sky-600 shadow-sm"><i class="fas fa-arrow-left"></i></a>
+                    <h1 class="text-2xl font-black text-sky-900 uppercase">Ombor</h1>
+                </div>
+                
+                <div class="flex gap-2 w-full md:w-auto">
+                    <div class="glass flex-1 md:w-80 px-6 py-3 rounded-2xl flex items-center shadow-sm border border-white/80">
+                        <i class="fas fa-search text-sky-400 mr-4"></i>
+                        <input type="text" placeholder="Tovarlarni qidirish..." class="bg-transparent border-none outline-none w-full text-sm font-bold text-sky-900">
+                    </div>
+                    <button onclick="openModal()" class="w-14 h-14 bg-sky-600 text-white rounded-2xl flex items-center justify-center shadow-lg hover:bg-sky-700 transition">
+                        <i class="fas fa-plus text-xl"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="glass p-6 rounded-[2.5rem] border-b-8 border-sky-500 shadow-sm">
+                    <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Umumiy tovar turlari</h3>
+                    <p class="text-3xl font-black text-sky-900 mt-1">{{ products|length }} <span class="text-xs uppercase italic">tur</span></p>
+                </div>
+                <div class="glass p-6 rounded-[2.5rem] border-b-8 border-emerald-500 shadow-sm">
+                    <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Jami stokda</h3>
+                    <p class="text-3xl font-black text-sky-900 mt-1">
+                        {% set total_stock = namespace(value=0) %}
+                        {% for p in products %}{% for b in p.batches %}{% set total_stock.value = total_stock.value + b.quantity %}{% endfor %}{% endfor %}
+                        {{ total_stock.value }} <span class="text-xs uppercase italic">dona</span>
+                    </p>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                {% for product in products %}
+                <div class="product-item">
+                    {% set p_total = namespace(value=0) %}
+                    {% for b in product.batches %}{% set p_total.value = p_total.value + b.quantity %}{% endfor %}
+                    
+                    <div onclick="toggleBatch(this)" class="glass p-6 md:px-10 rounded-[2.5rem] grid grid-cols-2 md:grid-cols-5 items-center cursor-pointer product-card border border-white/50">
+                        <div class="col-span-1 md:col-span-2 flex items-center gap-4">
+                            <div class="w-12 h-12 bg-sky-100 rounded-2xl flex items-center justify-center text-sky-600 shadow-inner font-black uppercase text-xl">{{ product.name[:1] }}</div>
+                            <div>
+                                <h4 class="font-black text-sky-900">{{ product.name }}</h4>
+                                <p class="text-[10px] font-bold text-sky-400">{{ product.category }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="hidden md:block text-center font-black text-sky-900 text-lg">
+                            {{ p_total.value }} <span class="text-[10px]">dona</span>
+                        </div>
+                        
+                        <div class="hidden md:block text-center font-black text-emerald-600">
+                            {% if product.batches %}
+                                {{ "{:,.0f}".format(product.batches[-1].entry_price) }} <span class="text-[10px]">uzs</span>
+                            {% else %} 0 <span class="text-[10px]">uzs</span> {% endif %}
+                        </div>
+                        
+                        <div class="text-right flex justify-end items-center gap-3">
+                            <button onclick="event.stopPropagation(); openSellModal('{{ product.name }}', {{ p_total.value }})" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase transition shadow-md">
+                                Sotish
+                            </button>
+                            <span class="md:hidden font-black text-sky-900 bg-white/50 px-3 py-1 rounded-full text-xs">{{ p_total.value }} dona</span>
+                            <i class="fas fa-chevron-down text-sky-300 rotate-icon"></i>
+                        </div>
+                    </div>
+
+                    <div class="batch-list px-4 md:px-10">
+                        <div class="bg-white/40 rounded-b-[2rem] p-6 space-y-3 border-x border-b border-white/30">
+                            <h5 class="text-[10px] font-black text-sky-800 uppercase mb-4 tracking-tighter italic">Partiyalar tarixi:</h5>
+                            {% for batch in product.batches %}
+                            <div class="flex justify-between items-center p-3 bg-white/60 rounded-2xl shadow-sm border border-white/40">
+                                <div class="flex items-center gap-4">
+                                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">#{{ batch.created_at.strftime('%d-%b') if batch.created_at else "No'malum" }}</div>
+                                    <div class="font-black text-sky-900 text-sm">{{ batch.quantity }} dona</div>
+                                </div>
+                                <div class="font-black text-emerald-600 text-sm">{{ "{:,.0f}".format(batch.entry_price) }} uzs</div>
+                                <div class="text-[10px] font-bold text-sky-500 px-3 py-1 bg-sky-50 rounded-lg">{{ batch.store_name }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+
+    <div id="addProductModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-sky-900/30 backdrop-blur-md">
+        <section class="glass w-full max-w-xl p-8 rounded-[3rem] border-t-8 border-sky-500 shadow-2xl relative modal-anim">
+            <button onclick="closeModal()" class="absolute right-6 top-6 w-10 h-10 flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition"><i class="fas fa-times"></i></button>
+            <h2 class="text-lg font-black text-sky-900 mb-8 uppercase italic">Yangi tovar qo'shish</h2>
+            <form action="/add_product" method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <input type="hidden" name="email" value="{{ user.email }}">
+                <div class="md:col-span-2">
+                    <label class="text-[10px] font-black text-sky-400 ml-4 uppercase">Tovar nomi</label>
+                    <input type="text" name="name" class="w-full bg-white/50 rounded-2xl px-6 py-4 text-sm font-bold shadow-inner mt-1" required>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-sky-400 ml-4 uppercase">Kategoriya</label>
+                    <select name="category" class="w-full bg-white/50 rounded-2xl px-6 py-4 text-sm font-bold shadow-inner mt-1">
+                        <option value="Kiyim-kechak">Kiyim-kechak</option>
+                        <option value="Oziq-ovqat">Oziq-ovqat</option>
+                        <option value="Elektronika">Elektronika</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-sky-400 ml-4 uppercase">Soni</label>
+                    <input type="number" name="quantity" class="w-full bg-white/50 rounded-2xl px-6 py-4 text-sm font-bold shadow-inner mt-1" required>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-sky-400 ml-4 uppercase">Narxi (Kirish)</label>
+                    <input type="number" step="0.01" name="price" class="w-full bg-white/50 rounded-2xl px-6 py-4 text-sm font-bold shadow-inner mt-1" required>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-sky-400 ml-4 uppercase">Sklad</label>
+                    <input type="text" name="store" class="w-full bg-white/50 rounded-2xl px-6 py-4 text-sm font-bold shadow-inner mt-1" required>
+                </div>
+                <button type="submit" class="md:col-span-2 bg-sky-600 text-white rounded-2xl font-black py-5 mt-4">SAQLASH</button>
+            </form>
+        </section>
+    </div>
+
+    <div id="sellProductModal" class="fixed inset-0 z-[110] hidden flex items-center justify-center p-4 bg-emerald-900/30 backdrop-blur-md">
+        <section class="glass w-full max-w-md p-8 rounded-[3rem] border-t-8 border-emerald-500 shadow-2xl relative modal-anim">
+            <button onclick="closeSellModal()" class="absolute right-6 top-6 w-10 h-10 flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition"><i class="fas fa-times"></i></button>
+            <h2 class="text-lg font-black text-emerald-900 mb-6 uppercase italic">Tovarni Sotish</h2>
+            <form action="/sell_product" method="POST" class="space-y-4">
+                <input type="hidden" name="email" value="{{ user.email }}">
+                <input type="hidden" name="product_name" id="sell_product_name">
+                <div>
+                    <label class="text-[10px] font-black text-emerald-600 ml-4 uppercase">Tovar</label>
+                    <div id="display_product_name" class="w-full bg-emerald-50 rounded-2xl px-6 py-4 text-sm font-black text-emerald-900 mt-1"></div>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-emerald-600 ml-4 uppercase">Sotish miqdori (Maks: <span id="max_qty">0</span>)</label>
+                    <input type="number" name="quantity_to_sell" id="sell_qty_input" class="w-full bg-white/50 rounded-2xl px-6 py-4 text-sm font-bold shadow-inner mt-1" required>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-emerald-600 ml-4 uppercase">Sotuv narxi (1 dona uchun)</label>
+                    <input type="number" name="sell_price" class="w-full bg-white/50 rounded-2xl px-6 py-4 text-sm font-bold shadow-inner mt-1" required>
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 text-white rounded-2xl font-black py-5 mt-4 uppercase">Sotuvni yakunlash</button>
+            </form>
+        </section>
+    </div>
+
+    <nav class="lg:hidden fixed bottom-6 left-6 right-6 z-50">
+        <div class="glass rounded-[2.5rem] p-3 flex justify-between items-center shadow-2xl">
+            <a href="/dashboard?email={{ user.email }}" class="w-12 h-12 text-sky-900 flex items-center justify-center"><i class="fas fa-th-large text-xl"></i></a>
+            <a href="/inventory?email={{ user.email }}" class="w-14 h-14 bg-sky-600 text-white rounded-[1.8rem] flex items-center justify-center shadow-lg"><i class="fas fa-box-archive text-xl"></i></a>
+            <a href="/debts?email={{ user.email }}" class="w-12 h-12 text-sky-900 flex items-center justify-center"><i class="fas fa-hand-holding-dollar text-xl"></i></a>
+            <a href="/ai-chat?email={{ user.email }}" class="w-12 h-12 text-sky-900 flex items-center justify-center"><i class="fas fa-robot text-xl"></i></a>
+        </div>
+    </nav>
+
+    <script>
+        // Avvalgi modal funksiyalari
+        function openModal() { document.getElementById('addProductModal').classList.remove('hidden'); }
+        function closeModal() { document.getElementById('addProductModal').classList.add('hidden'); }
+
+        // Yangi Sotish modal funksiyalari
+        function openSellModal(name, maxQty) {
+            document.getElementById('sell_product_name').value = name;
+            document.getElementById('display_product_name').innerText = name;
+            document.getElementById('max_qty').innerText = maxQty;
+            document.getElementById('sell_qty_input').max = maxQty;
+            document.getElementById('sellProductModal').classList.remove('hidden');
+        }
+        function closeSellModal() { document.getElementById('sellProductModal').classList.add('hidden'); }
+
+        function toggleBatch(element) { element.parentElement.classList.toggle('batch-active'); }
+    </script>
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Financy | AI Tahlilchi</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        @media (max-width: 1024px) {
+            .chat-sidebar { position: fixed; left: -100%; top: 0; bottom: 0; z-index: 100; background: #f0f4f9; width: 80%; transition: 0.3s ease; }
+            .sidebar-open { left: 0; }
+            .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 90; }
+            .overlay.active { display: block; }
+        }
+
+        .chat-container::-webkit-scrollbar { width: 4px; }
+        .chat-container::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        
+        /* Markdown va text formatting uchun */
+        .ai-message { line-height: 1.6; }
+        .ai-message ul { list-style-type: disc; margin-left: 20px; }
+    </style>
+</head>
+<body class="bg-[#f0f4f9] h-[100dvh] overflow-hidden flex flex-col">
+
+    <div id="overlay" class="overlay" onclick="toggleSidebar()"></div>
+
+    <header class="p-3 lg:p-4 flex justify-between items-center bg-transparent z-10">
+        <div class="flex items-center gap-3 lg:gap-4">
+            <button onclick="toggleSidebar()" class="w-10 h-10 hover:bg-gray-200 rounded-full flex items-center justify-center transition">
+                <i class="fas fa-bars text-gray-600"></i>
+            </button>
+            <h1 class="text-lg lg:text-xl font-bold text-gray-700">Financy <span class="text-blue-600">AI</span></h1>
+        </div>
+        <a href="/dashboard?email={{ user.email }}" class="text-[10px] font-black text-gray-400 hover:text-blue-600 border border-gray-200 px-3 py-1.5 rounded-full transition uppercase">
+            Dashboard
+        </a>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden relative">
+        <aside id="sidebar" class="chat-sidebar lg:w-72 h-full flex flex-col p-4 space-y-2">
+            <button onclick="window.location.reload()" class="flex items-center gap-3 px-5 py-3 bg-[#dde3ea] hover:bg-[#d3d9e0] rounded-full text-sm font-semibold text-gray-700 transition mb-6 shadow-sm">
+                <i class="fas fa-plus"></i>
+                <span>Yangi Chat</span>
+            </button>
+
+            <div class="flex-1 overflow-y-auto space-y-1">
+                <p class="px-4 text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Tarix</p>
+                <div class="px-4 py-3 text-xs text-gray-400 italic">Hozircha tarix mavjud emas</div>
+            </div>
+
+            <div class="pt-4 border-t border-gray-200">
+                <div class="flex items-center gap-3 p-3 bg-white/50 rounded-2xl">
+                    <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xs uppercase">
+                        {{ user.fullname[:1] }}
+                    </div>
+                    <span class="text-xs font-bold text-gray-600 truncate">{{ user.fullname }}</span>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col items-center bg-white lg:rounded-tl-[2.5rem] shadow-2xl relative overflow-hidden">
+            <div class="flex-1 w-full max-w-3xl overflow-y-auto p-4 lg:p-8 space-y-6 chat-container" id="chatContainer">
+                <div id="welcomeScreen" class="h-full flex flex-col items-center justify-center text-center space-y-6 py-10">
+                    <div class="w-16 h-16 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-[1.5rem] shadow-xl flex items-center justify-center text-white text-2xl animate-bounce">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl lg:text-4xl font-semibold bg-gradient-to-r from-blue-600 to-purple-500 bg-clip-text text-transparent">
+                            Salom, {{ user.fullname }}
+                        </h2>
+                        <p class="text-gray-400 mt-2 text-sm lg:text-base px-6">Financy AI — Omboringiz va qarzlaringizni tahlil qila olaman. Qanday yordam kerak?</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-full max-w-4xl px-4 pb-4 lg:pb-8">
+                <div class="bg-[#f0f4f9] rounded-[2rem] p-2 lg:p-3 shadow-inner border border-transparent focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                    <div class="flex items-end gap-2">
+                        <div class="flex pb-2 pl-2">
+                            <label class="w-10 h-10 hover:bg-white rounded-full flex items-center justify-center cursor-pointer transition text-gray-500">
+                                <i class="fas fa-paperclip"></i>
+                                <input type="file" class="hidden">
+                            </label>
+                        </div>
+                        
+                        <textarea 
+                            id="chatInput"
+                            rows="1" 
+                            placeholder="Biznesingiz haqida so'rang..." 
+                            class="flex-1 bg-transparent border-none outline-none py-3 px-2 text-gray-700 text-sm lg:text-base resize-none max-h-40"
+                        ></textarea>
+                        
+                        <button onclick="sendMessage()" class="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center hover:bg-blue-700 active:scale-90 transition shadow-lg shrink-0">
+                            <i class="fas fa-arrow-up"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('sidebar-open');
+            document.getElementById('overlay').classList.toggle('active');
+        }
+
+        const input = document.getElementById('chatInput');
+        input.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+
+        // ENTER bosilganda yuborish
+        input.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        async function sendMessage() {
+            const query = input.value.trim();
+            const container = document.getElementById('chatContainer');
+            const welcome = document.getElementById('welcomeScreen');
+
+            if (!query) return;
+
+            // Welcome screen'ni o'chirish
+            if (welcome) welcome.remove();
+
+            // 1. Foydalanuvchi xabari
+            container.innerHTML += `
+                <div class="flex justify-end animate-fade-in">
+                    <div class="bg-blue-600 text-white px-5 py-3 rounded-[1.5rem] max-w-[85%] text-sm shadow-md">
+                        ${query}
+                    </div>
+                </div>`;
+
+            input.value = '';
+            input.style.height = 'auto';
+            container.scrollTop = container.scrollHeight;
+
+            // 2. Yuklanish holati
+            const loadingId = "loading-" + Date.now();
+            container.innerHTML += `
+                <div id="${loadingId}" class="flex gap-3">
+                    <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-blue-600 text-xs">
+                        <i class="fas fa-robot animate-pulse"></i>
+                    </div>
+                    <div class="bg-gray-100 text-gray-400 px-5 py-3 rounded-[1.5rem] text-sm animate-pulse italic">
+                        Hisob-kitob qilinmoqda...
+                    </div>
+                </div>`;
+            container.scrollTop = container.scrollHeight;
+
+            // 3. Backendga yuborish
+            try {
+                const formData = new FormData();
+                formData.append('query', query);
+                formData.append('email', '{{ user.email }}');
+
+                const response = await fetch('/ask-ai', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+
+                // Yuklanishni o'chirish
+                document.getElementById(loadingId).remove();
+
+                // 4. AI Javobini chiqarish
+                container.innerHTML += `
+                    <div class="flex gap-3 animate-fade-in">
+                        <div class="w-8 h-8 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-[10px] shadow-sm">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="bg-gray-50 text-gray-800 px-5 py-3 rounded-[1.5rem] max-w-[85%] text-sm border border-gray-100 ai-message">
+                            ${data.answer.replace(/\n/g, '<br>')}
+                        </div>
+                    </div>`;
+            } catch (error) {
+                document.getElementById(loadingId).innerText = "Xatolik yuz berdi. Internetni tekshiring.";
+            }
+
+            container.scrollTop = container.scrollHeight;
+        }
+    </script>
+</body>
+</html>
