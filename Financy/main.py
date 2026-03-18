@@ -37,7 +37,7 @@ def send_otp(email: str, code: str):
         server.send_message(msg)
 
 # --- 1. REGISTER ---
-@app.get("/", response_class=HTMLResponse)
+@app.api_route("/", methods=["GET", "HEAD"],response_class=HTMLResponse)
 async def register_page(request: Request):
     return templates.TemplateResponse("register.html", {"request": request})
 
