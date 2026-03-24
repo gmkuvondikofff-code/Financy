@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>Financy | Qarzlar Nazorati</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.4); }
+        .bg-main { background: radial-gradient(circle at top left, #eef2ff 0%, #ffffff 50%, #e0e7ff 100%); }
+        .nav-active { background: #6366f1; color: white; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4); }
+        .debt-card:hover { transform: translateY(-2px); transition: all 0.2s; }
+        .detail-list { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out; }
+        .detail-active .detail-list { max-height: 1200px; }
+        .rotate-icon { transition: transform 0.3s; }
+        .detail-active .rotate-icon { transform: rotate(180deg); }
+    </style>
+</head>
+<body class="bg-main min-h-screen pb-24 lg:pb-0">
+
+    <div class="flex h-screen overflow-hidden">
+        <aside class="hidden lg:flex flex-col w-80 m-6 glass rounded-[3rem] p-8 shadow-2xl relative z-10">
+            <div class="mb-12"><h2 class="text-3xl font-black text-indigo-900 tracking-tighter italic">FINANCY</h2></div>
+            <nav class="space-y-4 flex-1">
+                <a href="/dashboard?email={{ user.email }}" class="flex items-center p-4 text-indigo-900 hover:bg-white/80 rounded-3xl transition-all"><i class="fas fa-th-large mr-4 text-xl"></i> <span class="font-bold text-sm">Dashboard</span></a>
+                <a href="/inventory?email={{ user.email }}" class="flex items-center p-4 text-indigo-900 hover:bg-white/80 rounded-3xl transition-all"><i class="fas fa-box-archive mr-4 text-xl"></i> <span class="font-bold text-sm">Ombor Tizimi</span></a>
+                <a href="/debts?email={{ user.email }}" class="flex items-center p-4 rounded-3xl nav-active transition-all"><i class="fas fa-hand-holding-dollar mr-4 text-xl"></i> <span class="font-extrabold text-sm">Qarz Daftar</span></a>
+                <a href="/ai-chat?email={{ user.email }}" class="flex items-center p-4 text-indigo-900 hover:bg-white/80 rounded-3xl transition-all"><i class="fas fa-robot mr-4 text-xl"></i> <span class="font-bold text-sm">AI Tahlilchi</span></a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto p-4 lg:p-10">
+            <header class="flex flex-col md:flex-row gap-4 justify-between items-center mb-8">
+                <div class="flex items-center gap-4 w-full md:w-auto">
+                    <a href="/dashboard?email={{ user.email }}" class="w-12 h-12 glass rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm"><i class="fas fa-arrow-left"></i></a>
+                    <h1 class="text-2xl font-black text-indigo-900 uppercase">Qarzlar Nazorati</h1>
+                </div>
+                
+                <div class="glass w-full md:w-96 px-6 py-3 rounded-2xl flex items-center shadow-sm border border-white/80">
+                    <i class="fas fa-search text-indigo-400 mr-4"></i>
+                    <input type="text" id="searchInput" onkeyup="searchDebts()" placeholder="Qarzdorni qidirish..." class="bg-transparent border-none outline-none w-full text-sm font-bold text-indigo-900">
+                </div>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="glass p-8 rounded-[3rem] border-b-8 border-rose-500 bg-white/40">
+                    <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Umumiy kutilayotgan haq</h3>
+                    <p class="text-4xl font-black text-rose-600 mt-1">
+                        {% set remaining_total = namespace(value=0) %}
+                        {% for d in debts %}{% set remaining_total.value = remaining_total.value + d.remaining_amount %}{% endfor %}
+                        {{ "{:,.0f}".format(remaining_total.value) }} <span class="text-sm italic uppercase">uzs</span>
+                    </p>
+                </div>
+                <button onclick="document.getElementById('addDebtForm').classList.toggle('hidden')" class="glass p-8 rounded-[3rem] bg-indigo-600 text-white font-black flex items-center justify-center gap-4 hover:bg-indigo-700 transition shadow-xl shadow-indigo-200 uppercase tracking-widest text-sm">
+                    <i class="fas fa-plus-circle text-2xl"></i> Tovar berish (Qarz yozish)
+                </button>
+            </div>
+
+            <div id="addDebtForm" class="hidden glass p-8 rounded-[3rem] mb-8 border-2 border-indigo-400 animate-fade-in shadow-2xl">
+                <h2 class="text-lg font-black text-indigo-900 mb-6 uppercase italic">Yangi Qarz Amaliyoti</h2>
+                <form action="/give_on_debt" method="POST" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <input type="hidden" name="email" value="{{ user.email }}">
+                    
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold text-gray-400 ml-4 uppercase">Mijoz Ismi</label>
+                        <input type="text" name="customer_name" required class="w-full p-4 rounded-2xl bg-white/50 border border-white focus:border-indigo-400 outline-none font-bold">
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold text-gray-400 ml-4 uppercase">Telefon raqami</label>
+                        <input type="text" name="phone" required placeholder="+998" class="w-full p-4 rounded-2xl bg-white/50 border border-white focus:border-indigo-400 outline-none font-bold">
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold text-gray-400 ml-4 uppercase">Berilayotgan Tovar</label>
+                        <select name="product_name" required class="w-full p-4 rounded-2xl bg-white/50 border border-white focus:border-indigo-400 outline-none font-bold">
+                            <option value="">Tovarni tanlang...</option>
+                            {% for product in products %}
+                                <option value="{{ product.name }}">{{ product.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold text-gray-400 ml-4 uppercase">Soni (Dona/Kg)</label>
+                        <input type="number" name="quantity" required class="w-full p-4 rounded-2xl bg-white/50 border border-white focus:border-indigo-400 outline-none font-bold">
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold text-gray-400 ml-4 uppercase">Sotish narxi (1 dona uchun)</label>
+                        <input type="number" name="sell_price" required class="w-full p-4 rounded-2xl bg-white/50 border border-white focus:border-indigo-400 outline-none font-bold">
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold text-gray-400 ml-4 uppercase">Qaytarish muddati</label>
+                        <input type="date" name="due_date" required class="w-full p-4 rounded-2xl bg-white/50 border border-white focus:border-indigo-400 outline-none font-bold">
+                    </div>
+
+                    <div class="lg:col-span-3">
+                        <button type="submit" class="w-full py-5 bg-indigo-600 text-white rounded-[2rem] font-black uppercase hover:bg-indigo-700 transition shadow-lg shadow-indigo-100">Qarzni Tasdiqlash</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="space-y-4" id="debtList">
+                {% for debt in debts %}
+                <div class="debt-item">
+                    <div onclick="toggleDetail(this)" class="glass p-6 md:px-10 rounded-[2.5rem] grid grid-cols-2 md:grid-cols-5 items-center cursor-pointer debt-card border border-white/50">
+                        <div class="col-span-1 md:col-span-2 flex items-center gap-4">
+                            <div class="w-12 h-12 {% if debt.status == 'closed' %}bg-emerald-100 text-emerald-600{% else %}bg-rose-100 text-rose-600{% endif %} rounded-2xl flex items-center justify-center shadow-inner">
+                                <i class="fas {% if debt.status == 'closed' %}fa-check-circle{% else %}fa-clock{% endif %} text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-indigo-900 customer-name">{{ debt.customer_name }}</h4>
+                                <p class="text-[10px] font-bold text-indigo-400 tracking-widest">{{ debt.phone }}</p>
+                            </div>
+                        </div>
+
+                        <div class="hidden md:block text-center">
+                            <div class="text-[10px] font-black text-gray-400 uppercase">Qolgan qarz</div>
+                            <div class="font-black text-rose-600 text-lg">{{ "{:,.0f}".format(debt.remaining_amount) }} <span class="text-[10px]">uzs</span></div>
+                        </div>
+
+                        <div class="hidden md:block text-center">
+                            <div class="text-[10px] font-black text-gray-400 uppercase">Qaytarish muddati</div>
+                            <span class="bg-amber-50 text-amber-600 px-4 py-1 rounded-full text-[10px] font-black border border-amber-100">
+                                {{ debt.due_date if debt.due_date else 'Kiritilmagan' }}
+                            </span>
+                        </div>
+
+                        <div class="text-right flex justify-end items-center gap-3">
+                            <div class="md:hidden font-black text-rose-600 bg-white/50 px-3 py-1 rounded-full text-xs">{{ "{:,.0f}".format(debt.remaining_amount) }}</div>
+                            <i class="fas fa-chevron-down text-indigo-300 rotate-icon"></i>
+                        </div>
+                    </div>
+
+                    <div class="detail-list px-4 md:px-10">
+                        <div class="bg-white/40 rounded-b-[3rem] p-8 space-y-6 border-x border-b border-white/30 shadow-inner">
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div class="glass p-5 rounded-3xl space-y-2">
+                                    <h5 class="text-[10px] font-black text-indigo-800 uppercase italic">Berilgan Tovar:</h5>
+                                    <p class="font-black text-indigo-900 text-lg">{{ debt.product_name }}</p>
+                                    <p class="text-xs font-bold text-indigo-500">{{ debt.quantity }} dona / Umumiy: {{ "{:,.0f}".format(debt.total_amount) }} uzs</p>
+                                </div>
+
+                                <div class="md:col-span-2 glass p-5 rounded-3xl bg-indigo-50/50 border border-indigo-200">
+                                    <h5 class="text-[10px] font-black text-indigo-800 uppercase mb-4">Qisman to'lov qilish</h5>
+                                    <form action="/pay_debt" method="POST" class="flex flex-col sm:flex-row gap-3">
+                                        <input type="hidden" name="email" value="{{ user.email }}">
+                                        <input type="hidden" name="debt_id" value="{{ debt.id }}">
+                                        
+                                        <div class="relative flex-1">
+                                            <input type="number" name="pay_amount" placeholder="Summa kiriting..." required 
+                                                   class="w-full p-3 rounded-xl bg-white border border-indigo-100 outline-none font-bold text-sm focus:ring-2 focus:ring-indigo-400">
+                                        </div>
+                                        
+                                        <button type="submit" class="bg-emerald-600 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase hover:bg-emerald-700 transition whitespace-nowrap">
+                                            To'lovni Saqlash
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="space-y-3">
+                                <h5 class="text-[10px] font-black text-gray-400 uppercase tracking-widest">To'lovlar tarixi:</h5>
+                                {% if debt.payments %}
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {% for payment in debt.payments %}
+                                        <div class="flex justify-between items-center p-4 bg-white/80 rounded-2xl border border-white">
+                                            <div class="text-[10px] font-black text-indigo-400">{{ payment.pay_date.strftime('%d-%m-%Y %H:%M') if payment.pay_date else '' }}</div>
+                                            <div class="font-black text-emerald-600">+ {{ "{:,.0f}".format(payment.pay_amount) }} uzs</div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <p class="text-xs italic text-gray-400">Hali to'lov qilinmagan</p>
+                                {% endif %}
+                            </div>
+
+                            <div class="pt-4 border-t border-indigo-50 flex justify-between items-center">
+                                <span class="text-[10px] font-bold text-indigo-400 italic">Yaratilgan: {{ debt.created_at.strftime('%d-%m-%Y') if debt.created_at else '' }}</span>
+                                <form action="/delete_debt" method="POST" onsubmit="return confirm('Qarzni butunlay o\'chirmoqchimisiz?')">
+                                    <input type="hidden" name="debt_id" value="{{ debt.id }}">
+                                    <input type="hidden" name="email" value="{{ user.email }}">
+                                    <button type="submit" class="text-rose-400 hover:text-rose-600 text-[10px] font-black uppercase underline">Ma'lumotni o'chirish</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+
+    <nav class="lg:hidden fixed bottom-6 left-6 right-6 z-50">
+        <div class="glass rounded-[2.5rem] p-3 flex justify-around items-center shadow-2xl border border-white">
+            <a href="/dashboard?email={{ user.email }}" class="w-12 h-12 text-indigo-900 flex items-center justify-center"><i class="fas fa-th-large text-xl"></i></a>
+            <a href="/inventory?email={{ user.email }}" class="w-12 h-12 text-indigo-900 flex items-center justify-center"><i class="fas fa-box-archive text-xl"></i></a>
+            <a href="/debts?email={{ user.email }}" class="w-16 h-14 bg-indigo-600 text-white rounded-[1.8rem] flex items-center justify-center shadow-lg -mt-10 border-4 border-white"><i class="fas fa-hand-holding-dollar text-xl"></i></a>
+            <a href="/ai-chat?email={{ user.email }}" class="w-12 h-12 text-indigo-900 flex items-center justify-center"><i class="fas fa-robot text-xl"></i></a>
+        </div>
+    </nav>
+
+    <script>
+        function toggleDetail(element) {
+            const parent = element.parentElement;
+            parent.classList.toggle('detail-active');
+        }
+
+        function searchDebts() {
+            let input = document.getElementById('searchInput').value.toLowerCase();
+            let items = document.getElementsByClassName('debt-item');
+            for (let i = 0; i < items.length; i++) {
+                let name = items[i].getElementsByClassName('customer-name')[0].innerText.toLowerCase();
+                items[i].style.display = name.includes(input) ? "" : "none";
+            }
+        }
+    </script>
+</body>
+</html>
