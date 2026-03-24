@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Financy | Dashboard</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.4); }
+        .bg-main { background: radial-gradient(circle at top left, #e0f7fa 0%, #ffffff 50%, #80deea 100%); }
+        .nav-active { background: #0ea5e9; color: white; box-shadow: 0 10px 15px -3px rgba(14, 165, 233, 0.4); }
+        #chartModal { display: none; position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); }
+    </style>
+</head>
+<body class="bg-main min-h-screen pb-28 lg:pb-0 overflow-x-hidden">
+
+    <div id="chartModal" class="flex items-center justify-center p-4">
+        <div class="glass bg-white w-full max-w-4xl p-8 rounded-[3rem] relative shadow-2xl">
+            <button onclick="closeChart()" class="absolute -top-3 -right-3 w-12 h-12 flex items-center justify-center bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <h3 class="text-xl font-bold text-sky-900 mb-6 text-center italic">Savdo Dinamikasi (Kvadrat ko'rinishda)</h3>
+            <div class="aspect-square max-h-[70vh] mx-auto">
+                <canvas id="zoomedChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex h-screen">
+        <aside class="hidden lg:flex flex-col w-72 m-6 glass rounded-[3rem] p-8 shadow-2xl relative z-20">
+            <div class="mb-10">
+                <h2 class="text-3xl font-black text-sky-900 tracking-tighter italic">FINANCY</h2>
+                <div class="h-1 w-10 bg-sky-500 rounded-full mt-1"></div>
+            </div>
+            <nav class="space-y-3 flex-1">
+                <a href="/dashboard?email={{ user.email }}" class="flex items-center p-4 rounded-3xl nav-active transition-all">
+                    <i class="fas fa-th-large mr-4 text-xl"></i> <span class="font-extrabold text-sm">Dashboard</span>
+                </a>
+                <a href="/inventory?email={{ user.email }}" class="flex items-center p-4 text-sky-900 hover:bg-white/80 rounded-3xl transition-all">
+                    <i class="fas fa-box-archive mr-4 text-xl"></i> <span class="font-bold text-sm">Ombor</span>
+                </a>
+                <a href="/debts?email={{ user.email }}" class="flex items-center p-4 text-sky-900 hover:bg-white/80 rounded-3xl transition-all">
+                    <i class="fas fa-hand-holding-dollar mr-4 text-xl"></i> <span class="font-bold text-sm">Qarzlar</span>
+                </a>
+                <a href="/ai-chat?email={{ user.email }}" class="flex items-center p-4 text-sky-900 hover:bg-white/80 rounded-3xl transition-all">
+                    <i class="fas fa-robot mr-4 text-xl"></i> <span class="font-bold text-sm">AI Chat</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto p-4 lg:p-8">
+            <header class="glass p-4 rounded-[2.5rem] flex justify-between items-center mb-8 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-sky-600 rounded-2xl flex items-center justify-center text-white shadow-lg"><i class="fas fa-user"></i></div>
+                    <span class="text-xs font-black text-sky-900 uppercase tracking-widest">{{ user.username }}</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <select id="shopSelect" onchange="checkNewShop(this.value)" class="bg-white/60 border-none rounded-2xl px-4 py-2 text-xs font-bold text-sky-900 shadow-sm outline-none cursor-pointer">
+                        <option value="main">Asosiy Do'kon</option>
+                        <option value="new">+ Yangi do'kon</option>
+                    </select>
+                    <a href="/billing?email={{ user.email }}" class="w-10 h-10 glass rounded-2xl flex items-center justify-center text-emerald-600 hover:bg-emerald-500 hover:text-white transition shadow-sm"><i class="fas fa-credit-card"></i></a>
+                    <a href="/settings?email={{ user.email }}" class="w-10 h-10 glass rounded-2xl flex items-center justify-center text-sky-600 hover:bg-sky-500 hover:text-white transition shadow-sm"><i class="fas fa-cog"></i></a>
+                </div>
+            </header>
+
+            <div class="mb-8">
+                <div onclick="zoomLineChart()" class="glass p-8 rounded-[3rem] cursor-zoom-in hover:shadow-xl transition-all duration-300 shadow-sm relative overflow-hidden group">
+                    <div class="absolute top-6 right-8 opacity-0 group-hover:opacity-100 transition-opacity bg-sky-100 text-sky-600 px-3 py-1 rounded-full text-[10px] font-black uppercase">Kattalashtirish uchun bosing</div>
+                    <h3 class="text-[10px] font-black text-sky-900 mb-6 uppercase tracking-[0.2em] text-center">Haftalik Savdo Dinamikasi</h3>
+                    <div class="h-[280px] pointer-events-none">
+                        <canvas id="lineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div class="glass p-8 rounded-[3rem] border-l-8 border-sky-500 flex flex-col justify-center shadow-sm">
+                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Haftalik Sof Foyda</span>
+                    <h2 class="text-4xl font-black text-sky-900">
+                        {{ "{:,.0f}".format(stats.week_profit or 0) }} <span class="text-sm font-medium italic">uzs</span>
+                    </h2>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="glass p-6 rounded-[2.5rem] border-b-4 border-emerald-400 shadow-sm">
+                        <span class="text-[9px] font-black text-gray-400 uppercase block mb-1">Kassa (Naqd)</span>
+                        <p class="text-xl font-black text-emerald-600">{{ "{:,.0f}".format(stats.kassa or 0) }}</p>
+                    </div>
+                    <div class="glass p-6 rounded-[2.5rem] border-b-4 border-red-400 shadow-sm">
+                        <span class="text-[9px] font-black text-gray-400 uppercase block mb-1">Qarzlar</span>
+                        <p class="text-xl font-black text-red-600">{{ "{:,.0f}".format(stats.active_debts or 0) }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass p-8 rounded-[3rem] bg-gradient-to-br from-sky-900 to-blue-800 text-white shadow-xl relative overflow-hidden">
+                <div class="relative z-10">
+                    <h2 class="text-xs font-black uppercase flex items-center gap-3 italic tracking-widest">
+                        <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span> Financy AI Maslahat
+                    </h2>
+                    <p class="mt-4 text-sm font-medium text-sky-100 leading-relaxed italic max-w-4xl">
+                        "Savdo ko'rsatkichlaringiz o'tgan haftaga nisbatan barqaror o'smoqda. Qarzlar va kassa balansi me'yorda."
+                    </p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <nav class="lg:hidden fixed bottom-6 left-6 right-6 z-50">
+        <div class="glass rounded-[2.5rem] p-3 flex justify-between items-center shadow-2xl border border-white/50">
+            <a href="/dashboard?email={{ user.email }}" class="w-12 h-12 bg-sky-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-sky-200 transition-transform active:scale-90"><i class="fas fa-th-large text-xl"></i></a>
+            <a href="/inventory?email={{ user.email }}" class="w-12 h-12 text-sky-900 flex items-center justify-center transition-transform active:scale-90"><i class="fas fa-box-archive text-xl"></i></a>
+            <a href="/debts?email={{ user.email }}" class="w-12 h-12 text-sky-900 flex items-center justify-center transition-transform active:scale-90"><i class="fas fa-hand-holding-dollar text-xl"></i></a>
+            <a href="/ai-chat?email={{ user.email }}" class="w-12 h-12 text-sky-900 flex items-center justify-center transition-transform active:scale-90"><i class="fas fa-robot text-xl"></i></a>
+        </div>
+    </nav>
+
+    <script>
+        const chartLabels = {{ (stats.chart_labels or ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya']) | tojson }};
+        const chartData = {{ (stats.chart_data or [0,0,0,0,0,0,0]) | tojson }};
+
+        // Line Chart Config
+        const lineConfig = {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [{ 
+                    label: 'Foyda', 
+                    data: chartData, 
+                    borderColor: '#0ea5e9', 
+                    backgroundColor: 'rgba(14, 165, 233, 0.1)', 
+                    fill: true, 
+                    tension: 0.4, 
+                    borderWidth: 4, 
+                    pointRadius: 6, 
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#0ea5e9',
+                    pointBorderWidth: 2
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                scales: { 
+                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)', drawBorder: false }, ticks: { font: { size: 10, weight: '600' } } }, 
+                    x: { grid: { display: false }, ticks: { font: { size: 11, weight: '700' } } } 
+                }, 
+                plugins: { legend: { display: false } } 
+            }
+        };
+
+        const mainLineChart = new Chart(document.getElementById('lineChart'), lineConfig);
+
+        // Zoom Logic
+        let zoomedChartInstance = null;
+        function zoomLineChart() {
+            const modal = document.getElementById('chartModal');
+            modal.style.display = 'flex';
+            const ctxZ = document.getElementById('zoomedChart').getContext('2d');
+            
+            if(zoomedChartInstance) zoomedChartInstance.destroy();
+            
+            // Kvadrat ko'rinish uchun config kopyasi
+            const zoomedConfig = JSON.parse(JSON.stringify(lineConfig));
+            zoomedConfig.options.maintainAspectRatio = true; // Kvadrat bo'lishini ta'minlaydi
+            zoomedChartInstance = new Chart(ctxZ, zoomedConfig);
+        }
+
+        function closeChart() {
+            document.getElementById('chartModal').style.display = 'none';
+        }
+
+        function checkNewShop(val) {
+            if(val === 'new') {
+                const name = prompt("Yangi do'kon nomini kiriting:");
+                if(name) alert(name + " muvaffaqiyatli qo'shildi!");
+                document.getElementById('shopSelect').value = 'main';
+            }
+        }
+    </script>
+</body>
+</html>

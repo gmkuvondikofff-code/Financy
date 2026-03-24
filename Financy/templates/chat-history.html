@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suhbat Tarixi | Financy</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .chat-card { border-radius: 15px; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .user-msg { background-color: #e3f2fd; padding: 10px; border-radius: 10px; margin-bottom: 5px; }
+        .ai-msg { background-color: #ffffff; padding: 10px; border-radius: 10px; border: 1px solid #dee2e6; }
+        .timestamp { font-size: 0.8rem; color: #6c757d; }
+    </style>
+</head>
+<body>
+
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-chat-dots"></i> Suhbatlar Tarixi</h2>
+        <a href="/" class="btn btn-outline-primary btn-sm">Asosiy sahifa</a>
+    </div>
+
+    {% if history %}
+        <div class="row">
+            {% for chat in history %}
+            <div class="col-12 mb-3">
+                <div class="card chat-card">
+                    <div class="card-body">
+                        <div class="user-msg">
+                            <strong>Siz:</strong> {{ chat.user_message }}
+                        </div>
+                        <div class="ai-msg">
+                            <strong>AI:</strong> {{ chat.ai_response }}
+                        </div>
+                        <div class="text-end mt-2">
+                            <span class="timestamp">{{ chat.created_at }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info text-center">
+            Hozircha suhbatlar tarixi mavjud emas.
+        </div>
+    {% endif %}
+</div>
+
+</body>
+</html>
