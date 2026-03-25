@@ -47,9 +47,10 @@ def send_otp(email: str, code: str):
         server.send_message(msg)
 
 # --- 1. REGISTER ---
-@app.api_route("/", methods=["GET", "HEAD"],response_class=HTMLResponse)
-async def register_page(request: Request):
-    return templates.TemplateResponse("register.html", {"request": request})
+# --- 1. REGISTER ---
+@app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
+async def register_page(request: Request, error: Optional[str] = None): # error qo'shildi
+    return templates.TemplateResponse(request, "register.html", {"request": request, "error": error})
 
 @app.post("/register")
 async def register(email: str = Form(...), fullname: str = Form(...), password: str = Form(...), 
@@ -67,7 +68,7 @@ async def register(email: str = Form(...), fullname: str = Form(...), password: 
 # --- 2. VERIFY ---
 @app.get("/verify", response_class=HTMLResponse)
 async def verify_page(request: Request, email: str): # email majburiy
-    return templates.TemplateResponse("verify.html", {"request": request, "email": email})
+    return templates.TemplateResponse(request, "verify.html", {"request": request, "email": email})
 
 @app.post("/confirm")
 async def confirm(email: str = Form(...), code: str = Form(...), db: Session = Depends(get_db)):
@@ -87,7 +88,7 @@ async def confirm(email: str = Form(...), code: str = Form(...), db: Session = D
 # --- 3. LOGIN ---
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request, error: Optional[str] = None):
-    return templates.TemplateResponse("login.html", {"request": request, "error": error})
+    return templates.TemplateResponse(request, "login.html", {"request": request, "error": error})
 
 @app.post("/login")
 async def login(email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
@@ -167,11 +168,7 @@ async def get_dashboard(request: Request, email: str, db: Session = Depends(get_
         "chart_data": chart_data
     }
 
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request, 
-        "user": user, 
-        "stats": stats
-    })
+    return templates.TemplateResponse(request, "dashboard.html", {"request": request, "user": user, "stats": stats})
 
 @app.post("/add_product")
 async def add_product(name: str = Form(...), category: str = Form(...), quantity: int = Form(...), 
@@ -205,18 +202,18 @@ async def pages(page: str, request: Request, email: str, db: Session = Depends(g
         # 2. TO'G'IRLASH: Qarz yozishda tovarlarni tanlash uchun mahsulotlarni ham yuklash kerak
         context["products"] = db.query(models.Product).filter(models.Product.user_email == email).all()
         
-    return templates.TemplateResponse(f"{page}.html", context)
+    return templates.TemplateResponse(request, f"{page}.html", context)
 # main.py ichiga qo'shing yoki yangilang
 # Settings va Billing sahifalari uchun
 @app.get("/settings")
 async def settings_page(request: Request, email: str, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == email).first()
-    return templates.TemplateResponse("settings.html", {"request": request, "user": user, "email": email})
+    return templates.TemplateResponse(request, "settings.html", {"request": request, "user": user, "email": email})
 
 @app.get("/billing")
 async def billing_page(request: Request, email: str, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == email).first()
-    return templates.TemplateResponse("billing.html", {"request": request, "user": user, "email": email})
+    return templates.TemplateResponse(request, "billing.html", {"request": request, "user": user, "email": email})
 
 @app.post("/sell_product")
 async def sell_product(
